@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>xhr进度指示器 ie10+</title>
+    <style></style>
+</head>
+
+<body>
+	<h1>已下载：<span id="h">0</span>%</h1>
+	<p>用时: <span id="stamp">0</span>秒</p>
+	<p>onprogress事件触发了<span id="d">0</span>次</p>
+
+<script type="text/javascript">
+	var h = document.getElementById('h');
+	var s = document.getElementById('stamp');
+	var d = document.getElementById('d');
+	var startTm = 0, n = 0;
+	var xhr = new XMLHttpRequest();
+
+	xhr.onload = function (ev) {
+		if (xhr.status === 200) {
+			s.innerHTML = Math.ceil((Date.now() - startTm) / 1000);
+			d.innerHTML = n;
+		}
+	}
+	
+	xhr.onloadstart = function (ev) {
+		startTm = Date.now();
+	}
+
+	xhr.onprogress = function (ev) {
+		// lengthComputable进度信息是否可以用 total总量 loaded已接收
+		if (ev.lengthComputable) {
+			n++
+			h.innerHTML = Math.floor(ev.loaded / ev.total * 100);
+			s.innerHTML = Math.ceil((Date.now() - startTm) / 1000);
+			d.innerHTML = n;
+		}
+	}
+	xhr.open('GET', 'ajax/a.miaov?_='+ Date.now(), true);
+	xhr.send(null);
+</script>
+</body>
+</html>
