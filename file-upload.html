@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>多文件上传</title>
+</head>
+
+<body>
+	<input id="upload" type="file" name="uploadFile" multiple="multiple"><span id="span">0</span>%
+	<!--  multiple="multiple" IE10开始支持 -->
+
+<script type="text/javascript">
+	var span = document.getElementById('span');
+	var upload = document.getElementById('upload'); 
+	upload.onchange = function (event) {
+		var xhr = new XMLHttpRequest();		
+		xhr.onload = function() {
+	        if(xhr.status === 200) {
+	            var data = xhr.reponseText;
+	            console.log('done')
+	        } else {
+	            alert('error: ' + xhr.status+xhr.statusText);
+	        }
+		}
+		xhr.upload.onprogress = function (e) {
+			var scale = Math.floor(e.loaded / e.total * 100);
+			span.innerHTML = scale;
+		}
+		xhr.open('post', 'testmysql.php', true);
+		var formData = new FormData();
+		var files = this.files;
+		for (var i = 0; i < files.length; i++) {
+			formData.append('file'+ i, files[i]);
+		}
+		xhr.send(formData);
+	}
+	// 在firefox下没听过 可能是因为php的原因  ie10+
+</script>
+</body>
+</html>
