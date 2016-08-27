@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="webxzy@qq.com">
+    <title>小便签 webxzy</title>
+    <style>
+    	body {
+    		background: #fafafa;
+    	}
+    	label {
+    		margin-bottom: 4px;
+    		display: inline-block;
+    		width: 120px;
+    		text-align: right;
+    	}
+    	input {
+    		width: 400px;
+    		margin: 0;
+    		padding: 3px;
+    		border: 1px solid #ddd;
+    		outline-style: none;
+    	}
+    	.wrap {
+    		width: 560px;
+    	}
+    	.button {
+    		text-align: right;
+    	}
+    	ul {
+    		padding: 0;
+    		font-size: 12px;
+    		list-style: none;
+    		color: #333;
+    		font-family: "microsoft yahei";
+    		font-weight: bold;
+    	}
+    	ul li {
+    		width: 140px;
+    		height: 125px;
+    		background: linear-gradient(to bottom, #fefecc, #fcf9a1);
+    		border-radius: 50px 0 50px 0;
+    		padding: 20px;
+    		float: left;
+    		margin-right: 40px;
+    		margin-bottom: 20px;
+    		position: relative;
+    		box-shadow: 1px 1px 5px #aaa, -1px -1px 5px #aaa;
+    	}
+    	ul p {
+    		text-overflow: ellipsis;
+    		overflow: hidden;
+   		 	white-space: nowrap;
+    	}
+    	h4 {
+    		margin: 0;
+    		text-align: center;
+    		color: red;
+    	}
+    	.del {
+    		text-decoration: none;
+    		position: absolute;
+    		right: 5px;
+    		top: 5px;
+    		color: #aaa;
+    	}
+    	form span {
+    		color: red;
+    	}
+    </style>
+</head>
+<body>
+	<div id="wrap" class="wrap">
+		<form id="iForm">
+			<fieldset>
+				<legend>便签</legend>
+				<p><label><span>*</span>今天做了什么：</label><input id="today" type="text"></p>
+				<p><label>明天要做什么：</label><input id="tomorrow" type="text"></p>
+				<p><label>学到了什么：</label><input id="what" type="text"></p>
+				<p><label>想对自己说：</label><input id="toMe" type="text"></p>
+				<p class="button"><button id="button">提交</button></p>
+			</fieldset>
+		</form>
+	</div>
+	<ul id="list" class="list">
+		<!-- <li>
+			<h4>2016-12-21</h4>
+			<p>今天完成了接口人开发</p>
+			<p>明天开始开发大家都在搜</p>
+			<p>学习了indexedDB</p>
+			<p>继续努力</p>
+			<a class="delete" id="del" href="javascript:;">ㄨ</a>
+		</li>-->
+	</ul>
+<script type="text/javascript">
+	var submit = document.getElementById('button');
+	var list = document.getElementById('list');
+	var today = document.getElementById('today');
+	var tomorrow = document.getElementById('tomorrow');
+	var what = document.getElementById('what');
+	var toMe = document.getElementById('toMe');
+	var db = null;
+
+	submit.onclick = function (e) {
+		e.preventDefault();
+		if (today.value === '') return alert('第一项不能为空！');
+		var t = new Date();
+		var date = t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate();
+		var content = {
+			today: today.value,
+			tomorrow: tomorrow.value,
+			what: what.value,
+			toMe: toMe.value,
+			time: date
+		}
+		myIndexedDB.addItem(content);
+	}
+
+	var myIndexedDB = {
+		openDB: (function () {
+			var request = indexedDB.open('mynote', 1);
+			request.onerror = function (e) {
+				alert(e.error);
+			}
+			request.onsuccess = function (e) {
+				db = request.result;
+				myIndexedDB.initNotes();
+			}
+			request.onupgradeneeded = function (e) {
+				var db = request.result;
+		    	var objectStore = db.createObjectStore("notes", { keyPath: "id", autoIncrement: true });
+			}
+		})(),
+		addItem: function(data) {
+			var transaction = db.transaction(['notes'], 'readwrite');
+			var objectStore = transaction.objectStore('notes');
+			var request = objectStore.add(data);
+			request.onerror = function () {
+				alert(request.error);
+			}
+			request.onsuccess = function () {
+				var iForm = document.getElementById('iForm');
+				iForm.reset();
+				myIndexedDB.initNotes();
+			}
+		},
+		initNotes: function () {
+			var transaction = db.transaction(['notes'], 'readonly');
+			var objectStore = transaction.objectStore('notes');
+			var cursor = objectStore.openCursor();
+			var html = '';
+			cursor.onerror = function (e) {
+				alert(e.error);
+			}
+			cursor.onsuccess = function (e) {
+				var result = cursor.result;
+				if (result) { // 查找不到返回null
+					var val = result.value;
+					html += '<li><h4>'+val.time+'</h4><p>'+val.today+'</p><p>'+val.tomorrow+'</p><p>'+val.what+'</p><p>'+val.toMe+'</p><a class="del" href="javascript:;" data-id='+val.id+'>ㄨ</a></li>';
+					result.continue();
+				} else {
+					list.innerHTML = html;
+					myIndexedDB.initDel();
+				}
+			}
+		},
+		initDel: function () {
+			var del = list.querySelectorAll('.del');
+			for (var i = 0; i < del.length; i++) {
+				del[i].onclick = myIndexedDB.delItem;
+			}
+		},
+		delItem: function () {
+			var transaction = db.transaction(['notes'], 'readwrite');
+			var objectStore = transaction.objectStore('notes');
+			var id = Number(this.attributes['data-id'].value); // id不能是字符串
+			var request = objectStore.delete(id);
+			request.onerror = function (e) {
+				alert(e.error);
+			}
+			request.onsuccess = function () {
+				myIndexedDB.initNotes();
+			}
+		}
+	};
+</script>
+</body>
+</html>
